@@ -8,11 +8,14 @@ use zip::CompressionMethod::Stored;
 use std::time::SystemTime;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = Path::new("locations.json");
+    let path = Path::new("locations.json"); // location data from westernmininghistory
     let file = File::open(&path)?;
     let reader = io::BufReader::new(file);
 
+    // where to write the output
     let output_file = File::create("locations.kmz")?;
+
+    // kmz files are just zip files in disguise :)
     let mut zip = zip::ZipWriter::new(output_file);
     let options = FileOptions::default()
         .compression_method(Stored)
@@ -21,17 +24,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     write!(zip, r#"<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
-<Document>"#)?;
+<Document>"#)?; // write header
 
     let mut i = 0;
-    for line in reader.lines() {
+    for line in reader.lines() { // each line should have a separate json object
         let line = line?;
-        let v: Value = serde_json::from_str(&line)?;
+        let v: Value = serde_json::from_str(&line)?; // parse line
 
-        let name = v["name"].as_str().unwrap().replace("&", "and");
+        // get name and location
+        let name = v["name"].as_str().unwrap().replace("&", "and"); // for some reason kmz doesnt like the & symbol which is used sometimes in the original .json file
         let lat = v["lat"].as_f64().unwrap();
         let long = v["long"].as_f64().unwrap();
 
+        // the list of mines is VERY LONG so this is just here because I wanted a representative sample of mines so I could look at the distribution of mines accross the west
         if i % 1000 == 0 {
             write!(zip, r#"<NetworkLink>
 <name>Region {}</name>
